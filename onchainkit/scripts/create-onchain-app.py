@@ -10,14 +10,19 @@ import subprocess
 import sys
 import os
 import json
+import re
+import shlex
 from pathlib import Path
 
+PROJECT_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+
 def run_command(cmd, check=True):
-    """Run a command and return the result."""
-    print(f"Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    """Run a command (list of arguments, no shell) and return the result."""
+    printable = shlex.join(cmd)
+    print(f"Running: {printable}")
+    result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
     if check and result.returncode != 0:
-        print(f"Error running command: {cmd}")
+        print(f"Error running command: {printable}")
         print(f"stdout: {result.stdout}")
         print(f"stderr: {result.stderr}")
         sys.exit(1)
@@ -27,11 +32,11 @@ def create_onchain_app(project_name, template=None):
     """Create a new OnchainKit app using create-onchain."""
     
     # Base command
-    cmd = f"npm create onchain@latest {project_name}"
+    cmd = ["npm", "create", "onchain@latest", project_name]
     
     # Add template if specified
     if template:
-        cmd += f" --template {template}"
+        cmd += ["--template", template]
     
     # Create the project
     print(f"Creating OnchainKit app: {project_name}")
@@ -138,13 +143,13 @@ Available templates:
     args = parser.parse_args()
     
     # Validate project name
-    if not args.project_name.replace("-", "").replace("_", "").isalnum():
-        print("Error: Project name should contain only letters, numbers, hyphens, and underscores")
+    if not PROJECT_NAME_RE.fullmatch(args.project_name):
+        print("Error: Project name should contain only letters, numbers, hyphens, and underscores, and start with a letter or number")
         sys.exit(1)
     
     # Check if npm is available
     try:
-        run_command("npm --version")
+        run_command(["npm", "--version"])
     except:
         print("Error: npm is not installed or not in PATH")
         sys.exit(1)
